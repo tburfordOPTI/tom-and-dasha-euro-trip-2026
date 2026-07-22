@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tom and Dasha's Euro Trip 2026 • Kanban + Calendar</title>
+    <title>Dasha and Toms Euro Trip 2026</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
@@ -117,7 +117,7 @@
                     <i class="fa-solid fa-lock text-white text-3xl"></i>
                 </div>
                 <div>
-                    <h1 class="text-2xl font-display tracking-tighter text-slate-900">Tom and Dasha's Euro Trip 2026</h1>
+                    <h1 class="text-2xl font-display tracking-tighter text-slate-900">Dasha and Toms Euro Trip 2026</h1>
                     <p class="text-slate-500 text-sm">Protected Kanban + Calendar</p>
                 </div>
             </div>
@@ -152,8 +152,8 @@
                     <div class="w-10 h-10 bg-teal-900 rounded-2xl flex items-center justify-center">
                         <i class="fa-solid fa-plane text-white text-2xl"></i>
                     </div>
-                    <div>
-                        <h1 class="text-3xl font-display tracking-tighter text-slate-900">France Trip • August 2026</h1>
+                    <div ondblclick="makeTitleEditable(this)">
+                        <h1 id="trip-title" class="text-3xl font-display tracking-tighter text-slate-900 cursor-pointer">Dasha and Toms Euro Trip 2026</h1>
                         <p class="text-slate-500 text-sm">1 – 20 August 2026 • Sydney ↔ London ↔ Paris ↔ Wiltshire</p>
                     </div>
                 </div>
@@ -237,7 +237,7 @@
             <div class="flex items-center justify-between mb-4 px-1">
                 <div>
                     <h2 class="text-xl font-semibold text-slate-900">Trip Calendar</h2>
-                    <p class="text-sm text-slate-500">1 – 20 August 2026 • Click any day to add or edit events</p>
+                    <p class="text-sm text-slate-500">1 – 20 August 2026 • Double-click any day to add an event</p>
                 </div>
                 <button onclick="clearCalendarEvents()" 
                         class="text-xs px-3 py-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors flex items-center gap-x-1.5">
@@ -264,11 +264,11 @@
         </div>
         
         <div class="text-center text-xs text-slate-400 mt-4">
-            Drag cards between columns • Click items to edit • Press <span class="font-mono">/</span> to add Kanban card
+            Drag cards between columns • Click items to edit • Double-click days to add events
         </div>
     </div>
 
-    <!-- Edit Modal (shared for Kanban + Calendar) -->
+    <!-- Edit Modal -->
     <div id="edit-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50" onclick="if (event.target.id === 'edit-modal') closeModal()">
         <div class="modal bg-white rounded-3xl w-full max-w-md mx-4 shadow-xl" onclick="event.stopImmediatePropagation()">
             <div class="p-6">
@@ -511,14 +511,46 @@
             localStorage.setItem('franceTripCalendar', JSON.stringify(calendarEvents));
         }
 
-        // === CALENDAR RENDERING (with weekdays) ===
+        // Make title editable on double click
+        function makeTitleEditable(element) {
+            const h1 = document.getElementById('trip-title');
+            const currentText = h1.textContent;
+            
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.value = currentText;
+            input.className = 'text-3xl font-display tracking-tighter bg-transparent border-b-2 border-teal-600 focus:outline-none w-full';
+            
+            h1.replaceWith(input);
+            input.focus();
+            input.select();
+            
+            function saveTitle() {
+                const newTitle = input.value.trim() || currentText;
+                const newH1 = document.createElement('h1');
+                newH1.id = 'trip-title';
+                newH1.className = 'text-3xl font-display tracking-tighter text-slate-900 cursor-pointer';
+                newH1.textContent = newTitle;
+                newH1.ondblclick = () => makeTitleEditable(newH1);
+                input.replaceWith(newH1);
+            }
+            
+            input.addEventListener('blur', saveTitle);
+            input.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    saveTitle();
+                }
+            });
+        }
+
+        // === CALENDAR RENDERING (with double-click support) ===
         function renderCalendar() {
             const grid = document.getElementById('calendar-grid');
             grid.innerHTML = '';
 
             for (let d = 1; d <= 20; d++) {
                 const dateStr = `2026-08-${String(d).padStart(2, '0')}`;
-                const dateObj = new Date(2026, 7, d); // August 2026 (month is 0-indexed)
+                const dateObj = new Date(2026, 7, d);
                 const weekday = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
                 
                 const dayEvents = calendarEvents.filter(e => e.date === dateStr);
@@ -529,6 +561,9 @@
                 const today = new Date();
                 const isToday = today.getMonth() === 7 && today.getDate() === d && today.getFullYear() === 2026;
                 if (isToday) dayEl.classList.add('today');
+
+                // Double-click to add new event
+                dayEl.ondblclick = () => addEventToDay(dateStr);
 
                 let eventsHTML = '';
                 dayEvents.forEach(event => {
