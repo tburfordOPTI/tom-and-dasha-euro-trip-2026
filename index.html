@@ -104,7 +104,7 @@
                     <span>Add to calendar</span>
                 </button>
                 
-                <button onclick="addNewCard()" 
+                <button onclick="showAddKanbanModal()" 
                         class="flex items-center gap-x-2 px-4 py-2.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-2xl text-sm font-medium transition-colors">
                     <i class="fa-solid fa-plus text-violet-600"></i>
                     <span>Add Kanban card</span>
@@ -137,7 +137,7 @@
                     <i class="fa-solid fa-plus text-teal-600 w-5"></i>
                     <span>Add to calendar</span>
                 </button>
-                <button onclick="addNewCard(); toggleMobileMenu()" class="flex items-center gap-x-3 px-4 py-3 hover:bg-slate-50 rounded-2xl text-left">
+                <button onclick="showAddKanbanModal(); toggleMobileMenu()" class="flex items-center gap-x-3 px-4 py-3 hover:bg-slate-50 rounded-2xl text-left">
                     <i class="fa-solid fa-plus text-violet-600 w-5"></i>
                     <span>Add Kanban card</span>
                 </button>
@@ -194,6 +194,17 @@
                     <div>
                         <label class="block text-xs font-medium text-slate-500 mb-1.5">Details</label>
                         <textarea id="modal-details-input" rows="3" class="w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm"></textarea>
+                    </div>
+
+                    <!-- Kanban column selector (shown only for new Kanban cards) -->
+                    <div id="kanban-column-selector" class="hidden">
+                        <label class="block text-xs font-medium text-slate-500 mb-1.5">Column</label>
+                        <select id="kanban-column-select" class="w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm">
+                            <option value="london">London</option>
+                            <option value="paris">Paris</option>
+                            <option value="wiltshire">Wiltshire</option>
+                            <option value="prep">Prep & Misc</option>
+                        </select>
                     </div>
                 </div>
             </div>
@@ -378,6 +389,9 @@
                 const colDiv = document.createElement("div");
                 colDiv.className = "kanban-column w-72 flex-shrink-0 p-4 border border-slate-200";
                 
+                // Double click on the column to add new card to it
+                colDiv.ondblclick = () => addKanbanCardToColumn(col.id);
+
                 const cardsHtml = kanbanData.cards
                     .filter(c => c.column === col.id)
                     .map(card => `
@@ -418,9 +432,13 @@
             editCalendarEvent(newEvent.id);
         }
 
+        let currentEdit = null;
+
         function editCalendarEvent(id) {
             const ev = calendarEvents.find(e => e.id === id);
             if (!ev) return;
+
+            currentEdit = { type: "calendar", id: id };
 
             document.getElementById("modal-title").textContent = "Edit Calendar Event";
             document.getElementById("modal-title-input").value = ev.title;
@@ -428,7 +446,9 @@
             document.getElementById("modal-ref-input").value = ev.ref || ev.time || "";
             document.getElementById("modal-details-input").value = ev.details;
 
-            window.currentEdit = { type: "calendar", id };
+            // Hide Kanban column selector
+            document.getElementById("kanban-column-selector").classList.add("hidden");
+
             document.getElementById("edit-modal").classList.remove("hidden");
             document.getElementById("edit-modal").classList.add("flex");
         }
@@ -437,13 +457,70 @@
             const card = kanbanData.cards.find(c => c.id === id);
             if (!card) return;
 
+            currentEdit = { type: "kanban", id: id };
+
             document.getElementById("modal-title").textContent = "Edit Kanban Card";
             document.getElementById("modal-title-input").value = card.title;
             document.getElementById("modal-date-input").value = card.date || "";
             document.getElementById("modal-ref-input").value = card.ref || "";
             document.getElementById("modal-details-input").value = card.details || "";
 
-            window.currentEdit = { type: "kanban", id };
+            // Hide column selector for edit
+            document.getElementById("kanban-column-selector").classList.add("hidden");
+
+            document.getElementById("edit-modal").classList.remove("hidden");
+            document.getElementById("edit-modal").classList.add("flex");
+        }
+
+        function showAddKanbanModal() {
+            // Open the edit modal in "add Kanban" mode
+            currentEdit = { type: "kanban", id: null }; // null means new
+
+            document.getElementById("modal-title").textContent = "Add Kanban Card";
+            document.getElementById("modal-title-input").value = "";
+            document.getElementById("modal-date-input").value = "";
+            document.getElementById("modal-ref-input").value = "";
+            document.getElementById("modal-details-input").value = "";
+
+            // Show column selector with the 4 options
+            const selector = document.getElementById("kanban-column-selector");
+            selector.classList.remove("hidden");
+
+            const select = document.getElementById("kanban-column-select");
+            select.innerHTML = `
+                <option value="london">London</option>
+                <option value="paris">Paris</option>
+                <option value="wiltshire">Wiltshire</option>
+                <option value="prep">Prep & Misc</option>
+            `;
+            // Default to London
+            select.value = "london";
+
+            document.getElementById("edit-modal").classList.remove("hidden");
+            document.getElementById("edit-modal").classList.add("flex");
+        }
+
+        function addKanbanCardToColumn(columnId) {
+            currentEdit = { type: "kanban", id: null };
+
+            document.getElementById("modal-title").textContent = "Add Kanban Card";
+            document.getElementById("modal-title-input").value = "";
+            document.getElementById("modal-date-input").value = "";
+            document.getElementById("modal-ref-input").value = "";
+            document.getElementById("modal-details-input").value = "";
+
+            const selector = document.getElementById("kanban-column-selector");
+            selector.classList.remove("hidden");
+
+            const select = document.getElementById("kanban-column-select");
+            select.innerHTML = `
+                <option value="london">London</option>
+                <option value="paris">Paris</option>
+                <option value="wiltshire">Wiltshire</option>
+                <option value="prep">Prep & Misc</option>
+            `;
+            select.value = columnId;
+
             document.getElementById("edit-modal").classList.remove("hidden");
             document.getElementById("edit-modal").classList.add("flex");
         }
@@ -454,23 +531,53 @@
             const ref = document.getElementById("modal-ref-input").value.trim();
             const details = document.getElementById("modal-details-input").value.trim();
 
-            if (!window.currentEdit) return;
+            if (!currentEdit) return;
 
-            if (window.currentEdit.type === "calendar") {
-                const ev = calendarEvents.find(e => e.id === window.currentEdit.id);
-                if (ev) {
-                    ev.title = title;
-                    ev.date = date;
-                    ev.ref = ref;
-                    ev.details = details;
+            if (currentEdit.id === null) {
+                // New item
+                if (currentEdit.type === "kanban") {
+                    const select = document.getElementById("kanban-column-select");
+                    const chosenColumn = select.value;
+
+                    const newCard = {
+                        id: "card-" + Date.now(),
+                        column: chosenColumn,
+                        title: title || "New card",
+                        date: date,
+                        ref: ref,
+                        details: details
+                    };
+                    kanbanData.cards.push(newCard);
+                } else {
+                    // new calendar (not used here)
+                    const newEvent = {
+                        id: "cal-" + Date.now(),
+                        date: date,
+                        title: title,
+                        time: ref,
+                        ref: ref,
+                        details: details
+                    };
+                    calendarEvents.push(newEvent);
                 }
             } else {
-                const card = kanbanData.cards.find(c => c.id === window.currentEdit.id);
-                if (card) {
-                    card.title = title;
-                    card.date = date;
-                    card.ref = ref;
-                    card.details = details;
+                // Existing
+                if (currentEdit.type === "kanban") {
+                    const card = kanbanData.cards.find(c => c.id === currentEdit.id);
+                    if (card) {
+                        card.title = title;
+                        card.date = date;
+                        card.ref = ref;
+                        card.details = details;
+                    }
+                } else {
+                    const ev = calendarEvents.find(e => e.id === currentEdit.id);
+                    if (ev) {
+                        ev.title = title;
+                        ev.date = date;
+                        ev.ref = ref;
+                        ev.details = details;
+                    }
                 }
             }
 
@@ -480,12 +587,17 @@
         }
 
         function deleteCurrentItem() {
-            if (!window.currentEdit || !confirm("Delete this item?")) return;
+            if (!currentEdit || !confirm("Delete this item?")) return;
 
-            if (window.currentEdit.type === "calendar") {
-                calendarEvents = calendarEvents.filter(e => e.id !== window.currentEdit.id);
+            if (currentEdit.id === null) {
+                closeModal();
+                return;
+            }
+
+            if (currentEdit.type === "kanban") {
+                kanbanData.cards = kanbanData.cards.filter(c => c.id !== currentEdit.id);
             } else {
-                kanbanData.cards = kanbanData.cards.filter(c => c.id !== window.currentEdit.id);
+                calendarEvents = calendarEvents.filter(e => e.id !== currentEdit.id);
             }
 
             saveToGist();
@@ -496,6 +608,7 @@
         function closeModal() {
             document.getElementById("edit-modal").classList.remove("flex");
             document.getElementById("edit-modal").classList.add("hidden");
+            document.getElementById("kanban-column-selector").classList.add("hidden");
         }
 
         function addNewCalendarEvent() {
@@ -512,21 +625,6 @@
             saveToGist();
             renderCalendar();
             editCalendarEvent(newEvent.id);
-        }
-
-        function addNewCard() {
-            const newCard = {
-                id: "card-" + Date.now(),
-                column: "prep",
-                title: "New task",
-                date: "",
-                ref: "",
-                details: ""
-            };
-            kanbanData.cards.push(newCard);
-            saveToGist();
-            renderKanban();
-            editKanbanCard(newCard.id);
         }
 
         function editTitle(el) {
