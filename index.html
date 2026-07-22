@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dasha & Tommy's Euro Trip Aug 2026 • Kanban</title>
+    <title>France Trip Aug 2026 • Kanban + Calendar</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
@@ -43,14 +43,27 @@
             transform: translateY(-2px);
         }
         
-        .kanban-card:active {
-            cursor: grabbing;
-            transform: scale(0.98);
+        .calendar-day {
+            background: white;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            transition: all 0.2s ease;
         }
         
-        .card-drag-over {
+        .calendar-day.today {
+            border-color: #14b8a6;
+            box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.1);
+        }
+        
+        .calendar-event {
+            background: #f8fafc;
+            border-left: 3px solid #14b8a6;
+            font-size: 12px;
+            transition: all 0.1s ease;
+        }
+        
+        .calendar-event:hover {
             background: #f0fdfa;
-            border: 2px dashed #14b8a6;
         }
 
         .section-header {
@@ -89,7 +102,7 @@
             to { opacity: 1; transform: scale(1) translateY(0); }
         }
 
-        .kanban-board {
+        .kanban-board, .calendar-grid {
             scrollbar-width: thin;
             scrollbar-color: #cbd5e1 #f8fafc;
         }
@@ -105,7 +118,7 @@
                 </div>
                 <div>
                     <h1 class="text-2xl font-display tracking-tighter text-slate-900">France Trip 2026</h1>
-                    <p class="text-slate-500 text-sm">Protected Kanban Board</p>
+                    <p class="text-slate-500 text-sm">Protected Kanban + Calendar</p>
                 </div>
             </div>
 
@@ -147,10 +160,16 @@
             </div>
             
             <div class="flex items-center gap-x-3">
+                <button onclick="addNewCalendarEvent()" 
+                        class="flex items-center gap-x-2 px-4 py-2.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-2xl text-sm font-medium transition-colors">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>Add to calendar</span>
+                </button>
+                
                 <button onclick="addNewCard()" 
                         class="flex items-center gap-x-2 px-4 py-2.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 rounded-2xl text-sm font-medium transition-colors">
                     <i class="fa-solid fa-plus"></i>
-                    <span>Add card</span>
+                    <span>Add Kanban card</span>
                 </button>
                 
                 <button onclick="exportToJSON()" 
@@ -213,22 +232,48 @@
             </div>
         </div>
 
-        <!-- Kanban Board -->
-        <div class="flex gap-4 overflow-x-auto pb-8 kanban-board" id="kanban-board">
-            <!-- Populated by JS -->
+        <!-- VISUAL CALENDAR SECTION -->
+        <div class="mb-10">
+            <div class="flex items-center justify-between mb-4 px-1">
+                <div>
+                    <h2 class="text-xl font-semibold text-slate-900">Trip Calendar</h2>
+                    <p class="text-sm text-slate-500">1 – 20 August 2026 • Click any day to add or edit events</p>
+                </div>
+                <button onclick="clearCalendarEvents()" 
+                        class="text-xs px-3 py-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors flex items-center gap-x-1.5">
+                    <i class="fa-solid fa-trash text-xs"></i>
+                    <span>Clear calendar</span>
+                </button>
+            </div>
+
+            <!-- Calendar Grid -->
+            <div class="calendar-grid grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-7 xl:grid-cols-10 gap-3" id="calendar-grid">
+                <!-- Populated dynamically by JS -->
+            </div>
+        </div>
+
+        <!-- KANBAN SECTION -->
+        <div>
+            <div class="flex items-center justify-between mb-4 px-1">
+                <h2 class="text-xl font-semibold text-slate-900">Kanban Board</h2>
+            </div>
+            
+            <div class="flex gap-4 overflow-x-auto pb-8 kanban-board" id="kanban-board">
+                <!-- Populated by JS -->
+            </div>
         </div>
         
         <div class="text-center text-xs text-slate-400 mt-4">
-            Drag cards • Click to edit • Press <span class="font-mono">/</span> to add new
+            Drag cards between columns • Click items to edit • Press <span class="font-mono">/</span> to add Kanban card
         </div>
     </div>
 
-    <!-- Edit Modal -->
+    <!-- Edit Modal (shared for Kanban + Calendar) -->
     <div id="edit-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center z-50" onclick="if (event.target.id === 'edit-modal') closeModal()">
         <div class="modal bg-white rounded-3xl w-full max-w-md mx-4 shadow-xl" onclick="event.stopImmediatePropagation()">
             <div class="p-6">
                 <div class="flex justify-between items-center mb-5">
-                    <h3 class="text-lg font-semibold text-slate-900" id="modal-title">Edit Card</h3>
+                    <h3 class="text-lg font-semibold text-slate-900" id="modal-title">Edit Item</h3>
                     <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600">
                         <i class="fa-solid fa-times text-xl"></i>
                     </button>
@@ -256,8 +301,8 @@
                         <textarea id="modal-details-input" rows="4" class="w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:border-teal-400 resize-y"></textarea>
                     </div>
                     
-                    <div>
-                        <label class="block text-xs font-medium text-slate-500 mb-1.5">Column</label>
+                    <div id="modal-column-section">
+                        <label class="block text-xs font-medium text-slate-500 mb-1.5">Column / Day</label>
                         <select id="modal-column-select" class="w-full px-4 py-3 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:border-teal-400">
                         </select>
                     </div>
@@ -265,7 +310,7 @@
             </div>
             
             <div class="px-6 py-4 bg-slate-50 rounded-b-3xl flex items-center justify-between border-t">
-                <button onclick="deleteCurrentCard()" 
+                <button onclick="deleteCurrentItem()" 
                         class="px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-100 rounded-2xl flex items-center gap-x-2 transition-colors">
                     <i class="fa-solid fa-trash"></i>
                     <span>Delete</span>
@@ -276,7 +321,7 @@
                             class="px-5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-100 rounded-2xl transition-colors">
                         Cancel
                     </button>
-                    <button onclick="saveCard()" 
+                    <button onclick="saveItem()" 
                             class="px-6 py-2 text-sm font-semibold bg-teal-900 hover:bg-teal-800 text-white rounded-2xl transition-colors">
                         Save changes
                     </button>
@@ -309,7 +354,7 @@
     </div>
 
     <script>
-        // SHA-256 hash of the password "france2026" (client-side only)
+        // SHA-256 hash of "france2026"
         const PASSWORD_HASH = "ea3537fd941e1562e39ff8b68078062a2094445a0ef089859906d7a0e3272bb9";
 
         async function hashString(str) {
@@ -328,7 +373,7 @@
                 document.getElementById('password-gate').classList.add('hidden');
                 document.getElementById('main-app').classList.remove('hidden');
                 document.getElementById('main-app').classList.add('block');
-                initKanban();
+                initApp();
             } else {
                 const inputEl = document.getElementById('password-input');
                 inputEl.classList.add('border-red-500', 'animate-pulse');
@@ -362,14 +407,12 @@
             }
             
             const newHash = await hashString(newPass);
-            // Note: In a real hosted version you'd store this server-side. 
-            // For this single-file version, the new hash is only for this session.
-            window.PASSWORD_HASH = newHash; 
-            alert("Password updated for this session (refresh will reset to original).");
+            window.PASSWORD_HASH = newHash;
+            alert("Password updated for this session.");
             hideChangePassword();
         }
 
-        // Kanban data
+        // Data structures
         let kanbanData = {
             columns: [
                 { id: 'flights', title: 'Flights', icon: 'fa-plane', color: 'teal' },
@@ -383,7 +426,9 @@
             cards: []
         };
 
-        const defaultCards = [
+        let calendarEvents = [];
+
+        const defaultKanbanCards = [
             { id: 'f1', column: 'flights', title: 'SQ222 SYD → SIN', date: '1 Aug 2026', ref: 'EEBMG9', details: 'Sydney 15:00 → Singapore 21:20 • A380 • 25kg baggage • KrisFlyer 2113528666' },
             { id: 'f2', column: 'flights', title: 'SQ322 SIN → LHR', date: '2 Aug 2026', ref: 'EEBMG9', details: 'Singapore 23:00 → London Heathrow 05:55 • A380 • Total journey ~23h 55m' },
             { id: 'f3', column: 'flights', title: 'SQ317 LHR → SIN', date: '19 Aug 2026', ref: 'EEBMG9', details: 'London 11:20 → Singapore 07:30 • A380 • Layover 2h 5m' },
@@ -402,25 +447,197 @@
             { id: 'prep3', column: 'prep', title: 'Pack & check baggage', date: '31 Jul', ref: '', details: '25kg allowance on all flights. KrisFlyer membership.' },
         ];
 
+        function populateCalendarFromKanban() {
+            const mapping = [
+                { date: '2026-08-01', title: 'SQ222 SYD → SIN', time: '15:00', ref: 'EEBMG9', details: 'Outbound flight' },
+                { date: '2026-08-02', title: 'SQ322 SIN → LHR', time: '23:00', ref: 'EEBMG9', details: 'Arrival in London' },
+                { date: '2026-08-02', title: 'Switch Car Rental pickup', time: '07:00', ref: '', details: 'BMW 3 Series at LHR' },
+                { date: '2026-08-05', title: 'Premier Inn check-in', time: '15:00', ref: 'MAQ4939260', details: 'Marylebone' },
+                { date: '2026-08-08', title: 'Eurostar London → Paris', time: '', ref: 'NTHTYW', details: '' },
+                { date: '2026-08-08', title: 'Paris Airbnb check-in', time: '15:00', ref: 'HMRPP4NT2K', details: 'Serenity Deluxe Suite' },
+                { date: '2026-08-11', title: 'Paris checkout + Hertz pickup', time: '15:30', ref: '729831855', details: 'Mercedes GLA' },
+                { date: '2026-08-11', title: 'Wiltshire Airbnb check-in', time: '15:00', ref: 'HMEYSQEDFY', details: 'The Old Coach House' },
+                { date: '2026-08-14', title: 'Wiltshire checkout', time: '12:00', ref: '', details: '' },
+                { date: '2026-08-19', title: 'Hertz drop-off + SQ317 departure', time: '11:20', ref: '729831855', details: 'LHR' },
+                { date: '2026-08-20', title: 'SQ211 SIN → SYD', time: '09:35', ref: 'EEBMG9', details: 'Return to Sydney' },
+            ];
+
+            calendarEvents = mapping.map((item, index) => ({
+                id: 'cal-' + (index + 1),
+                date: item.date,
+                title: item.title,
+                time: item.time,
+                ref: item.ref,
+                details: item.details
+            }));
+        }
+
         function loadData() {
-            const saved = localStorage.getItem('franceTripKanban');
-            if (saved) {
+            const savedKanban = localStorage.getItem('franceTripKanban');
+            if (savedKanban) {
                 try {
-                    const parsed = JSON.parse(saved);
+                    const parsed = JSON.parse(savedKanban);
                     if (parsed.cards && parsed.cards.length > 0) {
                         kanbanData.cards = parsed.cards;
-                        return;
+                    } else {
+                        kanbanData.cards = JSON.parse(JSON.stringify(defaultKanbanCards));
                     }
-                } catch (e) {}
+                } catch (e) {
+                    kanbanData.cards = JSON.parse(JSON.stringify(defaultKanbanCards));
+                }
+            } else {
+                kanbanData.cards = JSON.parse(JSON.stringify(defaultKanbanCards));
             }
-            kanbanData.cards = JSON.parse(JSON.stringify(defaultCards));
+
+            const savedCalendar = localStorage.getItem('franceTripCalendar');
+            if (savedCalendar) {
+                try {
+                    const parsed = JSON.parse(savedCalendar);
+                    if (parsed && parsed.length > 0) {
+                        calendarEvents = parsed;
+                    } else {
+                        populateCalendarFromKanban();
+                    }
+                } catch (e) {
+                    populateCalendarFromKanban();
+                }
+            } else {
+                populateCalendarFromKanban();
+            }
         }
 
         function saveData() {
             localStorage.setItem('franceTripKanban', JSON.stringify(kanbanData));
+            localStorage.setItem('franceTripCalendar', JSON.stringify(calendarEvents));
         }
 
-        function renderBoard() {
+        // === CALENDAR RENDERING (with weekdays) ===
+        function renderCalendar() {
+            const grid = document.getElementById('calendar-grid');
+            grid.innerHTML = '';
+
+            for (let d = 1; d <= 20; d++) {
+                const dateStr = `2026-08-${String(d).padStart(2, '0')}`;
+                const dateObj = new Date(2026, 7, d); // August 2026 (month is 0-indexed)
+                const weekday = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
+                
+                const dayEvents = calendarEvents.filter(e => e.date === dateStr);
+
+                const dayEl = document.createElement('div');
+                dayEl.className = `calendar-day p-3 min-h-[160px] flex flex-col`;
+                
+                const today = new Date();
+                const isToday = today.getMonth() === 7 && today.getDate() === d && today.getFullYear() === 2026;
+                if (isToday) dayEl.classList.add('today');
+
+                let eventsHTML = '';
+                dayEvents.forEach(event => {
+                    eventsHTML += `
+                        <div onclick="editCalendarEvent('${event.id}', event)" class="calendar-event px-2 py-1.5 mb-1.5 rounded-lg cursor-pointer">
+                            <div class="flex justify-between items-start">
+                                <div class="font-medium text-slate-800 text-xs leading-tight pr-1">${event.title}</div>
+                            </div>
+                            ${event.time ? `<div class="text-[10px] text-teal-600 mt-0.5">${event.time}</div>` : ''}
+                            ${event.ref ? `<div class="text-[9px] text-slate-500 mt-0.5 font-mono">${event.ref}</div>` : ''}
+                        </div>
+                    `;
+                });
+
+                dayEl.innerHTML = `
+                    <div class="flex items-center justify-between mb-2">
+                        <div>
+                            <div class="text-[10px] font-medium text-teal-600">${weekday}</div>
+                            <div class="text-xs text-slate-500">Aug</div>
+                            <div class="text-2xl font-semibold text-slate-900 leading-none">${d}</div>
+                        </div>
+                        <button onclick="addEventToDay('${dateStr}', event)" 
+                                class="text-teal-600 hover:text-teal-700 p-1 rounded-full hover:bg-teal-50 transition-colors">
+                            <i class="fa-solid fa-plus text-xs"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="flex-1 space-y-1 overflow-hidden">
+                        ${eventsHTML || `<div class="text-[10px] text-slate-400 italic">No events</div>`}
+                    </div>
+                `;
+
+                grid.appendChild(dayEl);
+            }
+        }
+
+        function addEventToDay(dateStr, e) {
+            if (e) e.stopImmediatePropagation();
+            
+            const newEvent = {
+                id: 'cal-' + Date.now(),
+                date: dateStr,
+                title: 'New event',
+                time: '',
+                ref: '',
+                details: ''
+            };
+            
+            calendarEvents.push(newEvent);
+            saveData();
+            renderCalendar();
+            
+            setTimeout(() => {
+                editCalendarEvent(newEvent.id);
+            }, 100);
+        }
+
+        function addNewCalendarEvent() {
+            const today = new Date(2026, 7, 1);
+            const dateStr = today.toISOString().split('T')[0];
+            
+            const newEvent = {
+                id: 'cal-' + Date.now(),
+                date: dateStr,
+                title: 'New event',
+                time: '',
+                ref: '',
+                details: ''
+            };
+            
+            calendarEvents.push(newEvent);
+            saveData();
+            renderCalendar();
+            
+            setTimeout(() => {
+                editCalendarEvent(newEvent.id);
+            }, 100);
+        }
+
+        let currentEditItem = null;
+
+        function editCalendarEvent(eventId) {
+            const event = calendarEvents.find(e => e.id === eventId);
+            if (!event) return;
+
+            currentEditItem = { type: 'calendar', id: eventId, data: event };
+
+            document.getElementById('modal-title').textContent = 'Edit Calendar Event';
+            document.getElementById('modal-title-input').value = event.title || '';
+            document.getElementById('modal-date-input').value = event.date || '';
+            document.getElementById('modal-ref-input').value = event.ref || '';
+            document.getElementById('modal-details-input').value = event.details || '';
+
+            const select = document.getElementById('modal-column-select');
+            select.innerHTML = '';
+            const option = document.createElement('option');
+            option.value = event.date;
+            option.textContent = event.date;
+            option.selected = true;
+            select.appendChild(option);
+
+            document.getElementById('modal-column-section').style.display = 'none';
+
+            document.getElementById('edit-modal').classList.remove('hidden');
+            document.getElementById('edit-modal').classList.add('flex');
+        }
+
+        // === KANBAN RENDERING ===
+        function renderKanban() {
             const board = document.getElementById('kanban-board');
             board.innerHTML = '';
 
@@ -451,15 +668,15 @@
                 const columnCards = kanbanData.cards.filter(c => c.column === column.id);
                 
                 columnCards.forEach(card => {
-                    const cardEl = createCardElement(card);
+                    const cardEl = createKanbanCardElement(card);
                     cardsContainer.appendChild(cardEl);
                 });
             });
             
-            updateCounts();
+            updateKanbanCounts();
         }
 
-        function createCardElement(card) {
+        function createKanbanCardElement(card) {
             const el = document.createElement('div');
             el.className = `kanban-card p-4 mb-3 group`;
             el.draggable = true;
@@ -468,7 +685,7 @@
             el.innerHTML = `
                 <div class="flex justify-between items-start mb-2">
                     <div class="font-medium text-sm text-slate-900 pr-2 leading-tight">${card.title}</div>
-                    <button onclick="editCard('${card.id}', event)" class="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-teal-600 transition-all p-1 -mr-1">
+                    <button onclick="editKanbanCard('${card.id}', event)" class="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-teal-600 transition-all p-1 -mr-1">
                         <i class="fa-solid fa-edit text-xs"></i>
                     </button>
                 </div>
@@ -491,14 +708,14 @@
             
             el.addEventListener('click', (e) => {
                 if (!e.target.closest('button')) {
-                    editCard(card.id, e);
+                    editKanbanCard(card.id, e);
                 }
             });
             
             return el;
         }
 
-        function updateCounts() {
+        function updateKanbanCounts() {
             kanbanData.columns.forEach(col => {
                 const countEl = document.getElementById(`count-${col.id}`);
                 if (countEl) {
@@ -523,7 +740,7 @@
             if (cardIndex !== -1) {
                 kanbanData.cards[cardIndex].column = targetColumnId;
                 saveData();
-                renderBoard();
+                renderKanban();
             }
         }
 
@@ -539,27 +756,27 @@
             
             kanbanData.cards.push(newCard);
             saveData();
-            renderBoard();
+            renderKanban();
             
             setTimeout(() => {
-                editCard(newCard.id);
+                editKanbanCard(newCard.id);
             }, 50);
         }
 
-        let currentEditCardId = null;
-
-        function editCard(cardId, event = null) {
+        function editKanbanCard(cardId, event = null) {
             if (event) event.stopImmediatePropagation();
             
-            currentEditCardId = cardId;
             const card = kanbanData.cards.find(c => c.id === cardId);
             if (!card) return;
 
+            currentEditItem = { type: 'kanban', id: cardId, data: card };
+
+            document.getElementById('modal-title').textContent = 'Edit Kanban Card';
             document.getElementById('modal-title-input').value = card.title || '';
             document.getElementById('modal-date-input').value = card.date || '';
             document.getElementById('modal-ref-input').value = card.ref || '';
             document.getElementById('modal-details-input').value = card.details || '';
-            
+
             const select = document.getElementById('modal-column-select');
             select.innerHTML = '';
             kanbanData.columns.forEach(col => {
@@ -569,7 +786,9 @@
                 if (col.id === card.column) option.selected = true;
                 select.appendChild(option);
             });
-            
+
+            document.getElementById('modal-column-section').style.display = 'block';
+
             document.getElementById('edit-modal').classList.remove('hidden');
             document.getElementById('edit-modal').classList.add('flex');
         }
@@ -577,53 +796,86 @@
         function closeModal() {
             document.getElementById('edit-modal').classList.remove('flex');
             document.getElementById('edit-modal').classList.add('hidden');
-            currentEditCardId = null;
+            currentEditItem = null;
         }
 
-        function saveCard() {
-            if (!currentEditCardId) return;
-            
-            const cardIndex = kanbanData.cards.findIndex(c => c.id === currentEditCardId);
-            if (cardIndex === -1) return;
+        function saveItem() {
+            if (!currentEditItem) return;
 
-            kanbanData.cards[cardIndex].title = document.getElementById('modal-title-input').value.trim();
-            kanbanData.cards[cardIndex].date = document.getElementById('modal-date-input').value.trim();
-            kanbanData.cards[cardIndex].ref = document.getElementById('modal-ref-input').value.trim();
-            kanbanData.cards[cardIndex].details = document.getElementById('modal-details-input').value.trim();
-            kanbanData.cards[cardIndex].column = document.getElementById('modal-column-select').value;
+            const title = document.getElementById('modal-title-input').value.trim();
+            const date = document.getElementById('modal-date-input').value.trim();
+            const ref = document.getElementById('modal-ref-input').value.trim();
+            const details = document.getElementById('modal-details-input').value.trim();
+
+            if (currentEditItem.type === 'kanban') {
+                const cardIndex = kanbanData.cards.findIndex(c => c.id === currentEditItem.id);
+                if (cardIndex !== -1) {
+                    kanbanData.cards[cardIndex].title = title;
+                    kanbanData.cards[cardIndex].date = date;
+                    kanbanData.cards[cardIndex].ref = ref;
+                    kanbanData.cards[cardIndex].details = details;
+                    kanbanData.cards[cardIndex].column = document.getElementById('modal-column-select').value;
+                }
+            } else if (currentEditItem.type === 'calendar') {
+                const eventIndex = calendarEvents.findIndex(e => e.id === currentEditItem.id);
+                if (eventIndex !== -1) {
+                    calendarEvents[eventIndex].title = title;
+                    calendarEvents[eventIndex].date = date;
+                    calendarEvents[eventIndex].ref = ref;
+                    calendarEvents[eventIndex].details = details;
+                }
+            }
 
             saveData();
             closeModal();
-            renderBoard();
+            renderKanban();
+            renderCalendar();
         }
 
-        function deleteCurrentCard() {
-            if (!currentEditCardId || !confirm('Delete this card?')) return;
-            
-            kanbanData.cards = kanbanData.cards.filter(c => c.id !== currentEditCardId);
+        function deleteCurrentItem() {
+            if (!currentEditItem || !confirm('Delete this item?')) return;
+
+            if (currentEditItem.type === 'kanban') {
+                kanbanData.cards = kanbanData.cards.filter(c => c.id !== currentEditItem.id);
+            } else if (currentEditItem.type === 'calendar') {
+                calendarEvents = calendarEvents.filter(e => e.id !== currentEditItem.id);
+            }
+
             saveData();
             closeModal();
-            renderBoard();
+            renderKanban();
+            renderCalendar();
+        }
+
+        function clearCalendarEvents() {
+            if (!confirm('Clear all calendar events?')) return;
+            calendarEvents = [];
+            saveData();
+            renderCalendar();
         }
 
         function exportToJSON() {
-            const dataStr = JSON.stringify(kanbanData, null, 2);
-            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-            
-            const exportFileDefaultName = 'france-trip-kanban.json';
+            const data = {
+                kanban: kanbanData,
+                calendar: calendarEvents
+            };
+            const dataStr = JSON.stringify(data, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
             
             const linkElement = document.createElement('a');
             linkElement.setAttribute('href', dataUri);
-            linkElement.setAttribute('download', exportFileDefaultName);
+            linkElement.setAttribute('download', 'france-trip-2026-full.json');
             linkElement.click();
         }
 
         function resetToDefault() {
-            if (!confirm('Reset board to original trip data?')) return;
+            if (!confirm('Reset everything to original trip data?')) return;
             
             localStorage.removeItem('franceTripKanban');
+            localStorage.removeItem('franceTripCalendar');
             loadData();
-            renderBoard();
+            renderKanban();
+            renderCalendar();
         }
 
         function setupKeyboard() {
@@ -642,19 +894,19 @@
             });
         }
 
-        function initKanban() {
+        function initApp() {
             loadData();
-            renderBoard();
+            renderKanban();
+            renderCalendar();
             setupKeyboard();
+        }
+
+        function initTailwind() {
+            // Tailwind via CDN
         }
 
         function init() {
             initTailwind();
-            // The password gate handles the rest
-        }
-
-        function initTailwind() {
-            // Tailwind CDN is already loaded
         }
 
         window.onload = init;
